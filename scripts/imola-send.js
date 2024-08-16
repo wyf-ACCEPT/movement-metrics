@@ -1,23 +1,40 @@
 const winston = require('winston')
-const { formatUnits } = require('ethers')
+const { formatUnits, parseUnits } = require('ethers')
 const {
-  Aptos, Account, Ed25519PrivateKey, AccountAddress, PendingTransactionResponse
+  Aptos, Account, Ed25519PrivateKey, AccountAddress, PendingTransactionResponse, HexInput,
 } = require("@aptos-labs/ts-sdk")
 require("dotenv").config()
 
 const rpcAptos = new Aptos({ indexer: process.env.INDEXER_APTOS, fullnode: process.env.RPC_APTOS })
 
 const logger = winston.createLogger({
-  level: 'info',
+  level: 'silly',
   format: winston.format.combine(
-    winston.format.colorize(),
+    // winston.format.colorize(),
     winston.format.timestamp(),
     winston.format.printf(({ timestamp, level, message }) => `${timestamp} [${level}]: ${message}`),
   ),
   transports: [
     new winston.transports.Console(),
+    new winston.transports.File({ filename: 'logs/imola-send.log'}),
   ],
 })
+
+/**
+ * @param {Account} account
+ * @returns {string}
+ */
+function explorerAddress(account) {
+  return `https://explorer.devnet.imola.movementlabs.xyz/#/account/${account.accountAddress.toString()}?network=testnet`
+}
+
+/**
+ * @param {string} hash
+ * @returns {string}
+ */
+function explorerTxn(hash) {
+  return `https://explorer.devnet.imola.movementlabs.xyz/#/txn/${hash}?network=testnet`
+}
 
 /**
  * @param {Account} sender
@@ -32,7 +49,11 @@ async function simpleTransfer(sender, to, amount) {
       function: "0x1::aptos_account::transfer",
       typeArguments: [],
       functionArguments: [to, amount],
+      expireTimestamp: Date.now() / 1000 + 1_000,
     },
+    options: {
+      gasUnitPrice: 500,
+    }
   })
     .then(
       txn => rpcAptos.signAndSubmitTransaction({ signer: sender, transaction: txn })
@@ -40,68 +61,141 @@ async function simpleTransfer(sender, to, amount) {
 }
 
 
+/**
+ * 
+ * @param {HexInput} hash 
+ * @param {number} interval 
+ * @returns {Promise<PendingTransactionResponse>}
+ */
+async function waitForTransactionConfirmation(hash, interval) {
+  return new Promise((resolve, reject) => {
+    const checkTransaction = () => {
+      rpcAptos.getTransactionByHash({ transactionHash: hash })
+        .then(result => {
+          if (result.type === 'user_transaction') {
+            resolve(result)
+          } else if (result.type === 'pending_transaction') {
+            // logger.silly('Transaction not yet confirmed, retrying...')
+            setTimeout(checkTransaction, interval)
+          } else {
+            reject(`Error result type: ${result}`)
+          }
+        })
+        .catch(error => {
+          reject(`Error fetching transaction: ${error}`)
+        })
+    }
+    checkTransaction()
+  })
+}
+
+
+/**
+ * 
+ * @param {Account} sender 
+ * @param {Account} to 
+ * @param {number} amount 
+ * @param {number} interval 
+ * @param {number | string} idx1 
+ * @param {number | string} idx2 
+ * @param {undefined | Account[]} newAccounts
+ * @returns {Promise<void>}
+ */
+async function transferAndWait(sender, to, amount, interval, idx1, idx2, newAccounts) {
+  let formattedAmount = formatUnits(amount, 8)
+  return simpleTransfer(sender, to.accountAddress, amount)
+    .then(committedTxn => waitForTransactionConfirmation(committedTxn.hash, interval))
+    .then(result => {
+      logger.info(`Transfer [${idx1} -> ${idx2} (${formattedAmount} $APT)] succeeded: ${explorerTxn(result.hash)}`)
+      if (newAccounts !== undefined) newAccounts.push(to)
+    })
+    .catch(error => {
+      logger.error(`Error transfer [${idx1} -> ${idx2} (${formattedAmount} $APT)]: ${error}`)
+    })
+}
+
+
 const main = async () => {
+
+  const initialAmount = 500
+  const accountsUpperLimit = 200
+  const phase2epochs = 1000
+  const dustAmount = parseUnits('0.001', 8)
+
+  // Set up Alice account (Owner)
   const aliceAptos = Account.fromPrivateKey({
     privateKey: new Ed25519PrivateKey(process.env.PRIVATE_KEY_ALICE)
   })
   const aliceAptosAddress = aliceAptos.accountAddress.toString()
 
-  async function showAliceBalances(showAddress = true) {
-    if (showAddress)
-      logger.info(`Alice address (Aptos): ${aliceAptosAddress}`)
-    logger.info(`Alice address (Aptos) Balance: ${formatUnits(
-      await rpcAptos.getAccountAPTAmount({ accountAddress: aliceAptosAddress }), 8
-    )} 💎`)
+  logger.info(`Alice address (Aptos): ${aliceAptosAddress}`)
+  logger.info(`Alice address (Aptos) Balance: ${formatUnits(
+    await rpcAptos.getAccountAPTAmount({ accountAddress: aliceAptosAddress }), 8
+  )} $APT`)
+
+
+  // Set up initial account (first distributor)
+  const initialAccount = Account.generate()
+  logger.debug(`Address [0]: ${explorerAddress(initialAccount)}`)
+
+  await transferAndWait(
+    aliceAptos, initialAccount,
+    parseUnits(initialAmount.toString(), 8), 5_000, 'x', 0, 
+  )
+
+  logger.info(`Waiting for cooldown ...\n`)
+  await new Promise(resolve => setTimeout(resolve, 5000))
+
+
+  // Phase 1: Recursive transfer
+  let accounts = [initialAccount]
+
+  for (let layer = 0; ; layer++) {
+    logger.warn(`Layer ${layer + 1} started, total ${accounts.length} accounts.`)
+    let newAccounts = []
+    let transactions = []
+
+    for (let i = 0; i < accounts.length; i++) {
+      let someone = Account.generate()
+      logger.debug(`Address [${i + accounts.length}]: ${explorerAddress(someone)}`)
+      let sender = accounts[i]
+      let amount = parseInt(await rpcAptos.getAccountAPTAmount({ accountAddress: sender.accountAddress.toString() }) / 2)
+
+      transactions.push(transferAndWait(
+        sender, someone, amount, 5_000 + Math.random() * 1000, i, i + accounts.length, newAccounts,
+      ))
+    }
+
+    await Promise.all(transactions)
+    accounts.push(...newAccounts)
+
+    logger.warn(`Layer ${layer + 1} done! Total ${accounts.length} accounts.`)
+
+    if (accounts.length <= accountsUpperLimit) {
+      logger.info(`Waiting for cooldown ...\n`)
+      await new Promise(resolve => setTimeout(resolve, 5000))
+    } else {
+      break
+    }
   }
 
-  await showAliceBalances(true)
 
-  // for (let i = 0; i < 1; i++) {
-  //   const someone = Account.generate()
-  //   rpcAptos.transaction.build.simple({
-  //     sender: aliceAptos.accountAddress,
-  //     data: {
-  //       function: "0x1::aptos_account::transfer",
-  //       typeArguments: [],
-  //       functionArguments: [someone.accountAddress, 100],
-  //     },
-  //   })
-  //     .then(txn => rpcAptos.signAndSubmitTransaction({ signer: aliceAptos, transaction: txn }))
-  //     .then(committedTxn => {
-  //       logger.info(`Waiting for transaction (${committedTxn.hash}) ...`)
-  //       return rpcAptos.waitForTransaction({
-  //         transactionHash: committedTxn.hash, options: { timeoutSecs: 60, checkSuccess: true }
-  //       })
-  //     })
-  //     .then(committedTxn => {
-  //       logger.info(`Sent 0.000001 APT to ${someone.accountAddress.toString()}`)
-  //       logger.info(`View on explorer: https://explorer.devnet.imola.movementlabs.xyz/#/${committedTxn.hash}?network=testnet`)
-  //     })
-  // }
+  // Phase 2: Parallel transfer
+  logger.warn(`\n\nPhase 2 started, total ${accounts.length} accounts.`)
 
-  // setTimeout(async () => { await showAliceBalances(false) }, 2)
-
-  const someone = Account.generate()
-  const intervalId = await simpleTransfer(aliceAptos, someone.accountAddress, 100)
-    .then(committedTxn => setInterval(async () => {
-      rpcAptos.getTransactionByHash({ transactionHash: committedTxn.hash })
-        .then(result => {
-          if (result.type === 'user_transaction') {
-            logger.info(`Transaction succeeded: ${result.hash}`)
-            logger.info(`View on explorer: https://explorer.devnet.imola.movementlabs.xyz/#/txn/${result.hash}?network=testnet`)
-            clearInterval(intervalId)
-          } else if (result.type === 'pending_transaction') {
-            logger.info('Transaction not yet confirmed, retrying...')
-          } else {
-            logger.error(`Error fetching transaction: ${result}`)
-          }
-        })
-        .catch(error => {
-          logger.error('Error fetching transaction:', error)
-        })
-    }, 5000))
-
-  // logger.info(`View on explorer: https://explorer.devnet.imola.movementlabs.xyz/#/${committedTxn.hash}?network=testnet`)
+  for (let epoch = 0; epoch < phase2epochs; epoch++) {
+    logger.warn(`Epoch ${epoch + 1} started!`)
+    const transactions = []
+    for (let i = 0; i < accounts.length; i++) {
+      let someone = Account.generate()
+      transactions.push(transferAndWait(
+        accounts[i], someone, dustAmount, 5_000 + Math.random() * 1000, i, '?'
+      ))
+    }
+    await Promise.all(transactions)
+    logger.warn(`Epoch ${epoch + 1} done!`)
+    logger.info(`Waiting for cooldown ...\n`)
+  }
 
 
 }
