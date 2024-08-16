@@ -68,10 +68,13 @@ async function showActiveAddress(start, end) {
 
 async function main() {
   console.log("\n==================================================================")
-  await showActiveAddress('2024-07-16 00:00:00', '2024-08-12 23:59:59')
+  await showActiveAddress('2024-07-16 00:00:00', '2024-08-05 23:59:59') // 8.5 11:59:59 PM UTC
+  await showActiveAddress('2024-07-16 00:00:00', '2024-08-16 01:00:00') // 8.16 1AM UTC
 
   console.log("\n==================================================================")
-  console.log("Total txns: ", (await db('imola_metrics').count('*'))[0].count)
+  // console.log("Total txns: ", (await db('imola_metrics').count('*'))[0].count)
+  await showCountTimeframe('2024-07-16 00:00:00', '2024-08-16 01:00:00') // 8.16 1AM UTC
+
   await showCountTimeframe('2024-07-16 00:00:00', '2024-07-22 23:59:59')
   await showCountTimeframe('2024-07-23 00:00:00', '2024-07-29 23:59:59')
   await showCountTimeframe('2024-07-30 00:00:00', '2024-08-05 23:59:59')

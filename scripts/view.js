@@ -12,7 +12,7 @@ async function main() {
       // .count('*')
       // .groupBy('type')
       .select('*')
-      .orderBy('timestamp', 'asc')
+      .orderBy('timestamp', 'desc')
       .limit(5)
   )
   // console.log(

@@ -3,7 +3,8 @@ const { Aptos, TransactionResponseType, Block } = require("@aptos-labs/ts-sdk")
 require("dotenv").config()
 
 const BATCH_SIZE = 1000
-const EPOCH = 4600
+const START = 4900
+const EPOCH = 4900
 
 const db = require('knex')({
   client: 'pg',
@@ -53,7 +54,7 @@ function parseBlockRaw(blockRaw) {
 const main = async () => {
   const rpcAptos = new Aptos({ fullnode: process.env.RPC_APTOS })
 
-  for (let heightBatch = 0; heightBatch < EPOCH; heightBatch++) {
+  for (let heightBatch = START; heightBatch < EPOCH; heightBatch++) {
     const promises = []
 
     for (let heightOffset = 0; heightOffset < BATCH_SIZE; heightOffset++) {
