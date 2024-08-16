@@ -1,5 +1,5 @@
 const winston = require('winston')
-const { Aptos, TransactionResponseType, Block, } = require("@aptos-labs/ts-sdk")
+const { Aptos, TransactionResponseType, Block } = require("@aptos-labs/ts-sdk")
 require("dotenv").config()
 
 const BATCH_SIZE = 1000
