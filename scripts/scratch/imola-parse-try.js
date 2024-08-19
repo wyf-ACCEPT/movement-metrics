@@ -30,7 +30,7 @@ function parseBlockRaw(blockRaw) {
 }
 
 const main = async () => {
-  const rpcAptos = new Aptos({ fullnode: process.env.RPC_APTOS })
+  const rpcAptos = new Aptos({ fullnode: process.env.RPC_IMOLA })
 
   rpcAptos.getBlockByHeight(
     { blockHeight: 200, options: { withTransactions: true } }

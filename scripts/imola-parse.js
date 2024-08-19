@@ -52,7 +52,7 @@ function parseBlockRaw(blockRaw) {
 }
 
 const main = async () => {
-  const rpcAptos = new Aptos({ fullnode: process.env.RPC_APTOS })
+  const rpcAptos = new Aptos({ fullnode: process.env.RPC_IMOLA })
 
   for (let heightBatch = START; heightBatch < EPOCH; heightBatch++) {
     const promises = []

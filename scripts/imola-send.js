@@ -5,7 +5,7 @@ const {
 } = require("@aptos-labs/ts-sdk")
 require("dotenv").config()
 
-const rpcAptos = new Aptos({ indexer: process.env.INDEXER_APTOS, fullnode: process.env.RPC_APTOS })
+const rpcAptos = new Aptos({ indexer: process.env.INDEXER_IMOLA, fullnode: process.env.RPC_IMOLA })
 
 const logger = winston.createLogger({
   level: 'silly',
@@ -124,7 +124,7 @@ const main = async () => {
 
   // Set up Alice account (Owner)
   const aliceAptos = Account.fromPrivateKey({
-    privateKey: new Ed25519PrivateKey(process.env.PRIVATE_KEY_ALICE)
+    privateKey: new Ed25519PrivateKey(process.env.OWNERPK_IMOLA)
   })
   const aliceAptosAddress = aliceAptos.accountAddress.toString()
 
