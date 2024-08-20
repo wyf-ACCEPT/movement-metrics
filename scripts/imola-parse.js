@@ -1,10 +1,12 @@
 const winston = require('winston')
-const { Aptos, TransactionResponseType, Block } = require("@aptos-labs/ts-sdk")
+const BigNumber = require('bignumber.js')
+const { Aptos: OriginalAptos, TransactionResponseType, Block, AnyNumber } = require("@aptos-labs/ts-sdk")
 require("dotenv").config()
 
 const BATCH_SIZE = 1000
 const START = 4900
-const EPOCH = 4900
+const EPOCH = 5300
+
 
 const db = require('knex')({
   client: 'pg',
@@ -25,6 +27,40 @@ const logger = winston.createLogger({
     }),
   ],
 })
+
+
+// Rewrite `getBlockByHeight` method to fetch all transactions in a block
+class Aptos extends OriginalAptos {
+  /**
+   * @param {{blockHeight: AnyNumber, options?: {withTransactions?: boolean}}} args 
+   * @returns {Promise<Block>}
+   */
+  async getBlockByHeight(args) {
+    if (!args.options || !args.options.withTransactions) {
+      return super.getBlockByHeight(args)
+    }
+    const block = await super.getBlockByHeight(args)
+    const fetchCount = block.transactions.length
+    let count = BigNumber(block.last_version).minus(block.first_version).toNumber() - fetchCount + 1
+    if (count > 0) {
+      block.transactions.push(
+        ...(await Promise.all(
+          Array(count)
+            .fill()
+            .map((_, i) => {
+              return super.getTransactionByVersion({
+                ledgerVersion: BigNumber(block.first_version)
+                  .plus(fetchCount + i)
+                  .toFixed(0),
+              })
+            }),
+        )),
+      )
+    }
+    return block
+  }
+}
+
 
 /**
  * @param {Block} blockRaw 
@@ -50,6 +86,7 @@ function parseBlockRaw(blockRaw) {
       }
     })
 }
+
 
 const main = async () => {
   const rpcAptos = new Aptos({ fullnode: process.env.RPC_IMOLA })

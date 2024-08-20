@@ -8,18 +8,21 @@ const db = require('knex')({
 async function main() {
   console.log(
     await db('imola_metrics')
+
       // .select('type')
       // .count('*')
       // .groupBy('type')
+
       .select('*')
       .orderBy('timestamp', 'desc')
       .limit(5)
+
+      // .select('block')
+      // .count('*')
+      // .groupBy('block')
+      // .having(db.raw('count(*) >= ?', [100]))
+      // .limit(5)
   )
-  // console.log(
-  //   await db('imola_metrics')
-  //     .select('*')
-  //     .limit(5)
-  // )
 
   db.destroy()
 }
