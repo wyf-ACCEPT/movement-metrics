@@ -14,8 +14,9 @@ async function main() {
       // .groupBy('type')
 
       .select('*')
+      .whereNotNull('timestamp')
       .orderBy('timestamp', 'desc')
-      .limit(5)
+      .limit(1)
 
       // .select('block')
       // .count('*')

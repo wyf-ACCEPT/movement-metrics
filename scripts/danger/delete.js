@@ -6,8 +6,11 @@ const db = require('knex')({
 })
 
 async function main() {
-  await db('imola_metrics').del()
-  console.log('Deleted all rows from imola_metrics')
+  // await db('imola_metrics').del()
+  // console.log('Deleted all rows from imola_metrics')
+  // await db('imola_addresses').del()
+  // await db.schema.dropTableIfExists('imola_addresses')
+  // console.log('Deleted all rows from imola_addresses')
 }
 
 main().then(() => db.destroy())
