@@ -5,7 +5,7 @@ require("dotenv").config()
 
 const BATCH_SIZE = 1000
 const START = 4900
-const EPOCH = 5300
+const END = 5300
 
 
 const db = require('knex')({
@@ -64,7 +64,7 @@ class Aptos extends OriginalAptos {
 
 /**
  * @param {Block} blockRaw 
- * @returns {[number, number, string, string, string[]][]}
+ * @returns {[string, string, number, number, Date, string[]][]}
  */
 function parseBlockRaw(blockRaw) {
   return blockRaw.transactions === null ? [] : blockRaw.transactions
@@ -91,7 +91,7 @@ function parseBlockRaw(blockRaw) {
 const main = async () => {
   const rpcAptos = new Aptos({ fullnode: process.env.RPC_IMOLA })
 
-  for (let heightBatch = START; heightBatch < EPOCH; heightBatch++) {
+  for (let heightBatch = START; heightBatch < END; heightBatch++) {
     const promises = []
 
     for (let heightOffset = 0; heightOffset < BATCH_SIZE; heightOffset++) {

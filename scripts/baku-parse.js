@@ -1,6 +1,16 @@
 const winston = require('winston')
-const { getFullnodeUrl, SuiClient } = require('@mysten/sui/client')
+const { SuiClient, Checkpoint, SuiTransactionBlockResponse } = require('@mysten/sui/client')
 require('dotenv').config()
+
+const BATCH_SIZE = 500
+const START = 4
+const END = 20
+
+
+const db = require('knex')({
+  client: 'pg',
+  connection: process.env.PG_CONNECTION_STRING,
+})
 
 const logger = winston.createLogger({
   level: 'info',
@@ -12,21 +22,64 @@ const logger = winston.createLogger({
   transports: [
     new winston.transports.Console(),
     new winston.transports.File({
-      filename: 'logs/imola-parsing.log', format: winston.format.simple()
+      filename: 'logs/baku-parsing.log', format: winston.format.simple()
     }),
   ],
 })
 
+
+/**
+ * @param {number} cpId 
+ * @param {SuiClient} suiClient
+ * @returns {Promise<[string, number, number, Date, string[]][]>}
+ */
+async function parseCheckpointId(cpId, suiClient) {
+  return suiClient.getCheckpoint({ id: cpId.toString() })
+    .then(checkpoint => suiClient.multiGetTransactionBlocks({
+      digests: checkpoint.transactions,
+      options: { showEffects: true, showInput: true },
+    }))
+    .then(responses => responses.map(response => {
+      const addressSet = new Set()
+      if (response.effects.mutated) 
+        response.effects.mutated.forEach(change => addressSet.add(change.owner.AddressOwner))
+      if (response.effects.created)
+        response.effects.created.forEach(change => addressSet.add(change.owner.AddressOwner))
+      addressSet.delete(undefined)
+      return {
+        digest: response.digest,
+        type: response.transaction.data.transaction.kind,
+        checkpoint: parseInt(response.checkpoint),
+        epoch: parseInt(response.effects.executedEpoch),
+        timestamp: new Date(parseInt(response.timestampMs)),
+        addresses: [...addressSet],
+      }
+    }))
+}
+
+
+
 const main = async () => {
-  const rpcUrl = process.env.RPC_BAKU
-  const client = new SuiClient({ url: rpcUrl })
-  console.log(await client.getLatestCheckpointSequenceNumber())
-  console.log(await client.getTotalTransactionBlocks())
-  console.log(await client.getCheckpoint({ id: "9430000" }))
-  // const { cp: cpStart, txns: txnsStart } = await findCheckpoint("2024-08-06T00:00:00Z", client)
-  // const { cp: cpEnd, txns: txnsEnd } = await findCheckpoint("2024-08-12T23:59:59Z", client)
-  // console.log(`\n${INFO} Checkpoint range: ${cpStart} - ${cpEnd} (total ${cpEnd - cpStart} checkpoints)`)
-  // console.log(`${INFO} Transaction range: ${txnsStart} - ${txnsEnd} (total ${txnsEnd - txnsStart} transactions)`)
+  const rpcSui = new SuiClient({ url: process.env.RPC_BAKU })
+
+  for (let heightBatch = START; heightBatch < END; heightBatch++) {
+    const promises = []
+
+    for (let heightOffset = 0; heightOffset < BATCH_SIZE; heightOffset++) {
+      const height = heightBatch * BATCH_SIZE + heightOffset
+      promises.push(parseCheckpointId(height, rpcSui))
+    }
+
+    const records = (await Promise.all(promises)).flat()
+    await db('baku_metrics').insert(records)
+      .then(() => {
+        const range = `${heightBatch * BATCH_SIZE} - ${(heightBatch + 1) * BATCH_SIZE - 1}`
+        logger.info(`Checkpoint [${range}], inserted ${records.length} records`)
+      })
+      .catch(err => logger.error(`Error inserting records: ${err}`))
+  }
+  
+  await db.destroy()
 }
 
 main()
