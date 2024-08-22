@@ -15,6 +15,12 @@ async function main() {
   )
   console.log(
     await db('baku_metrics')
+      .select('type')
+      .count('*')
+      .groupBy('type')
+  )
+  console.log(
+    await db('baku_metrics')
       .count('*')
   )
 

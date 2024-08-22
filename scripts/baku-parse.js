@@ -2,9 +2,9 @@ const winston = require('winston')
 const { SuiClient, Checkpoint, SuiTransactionBlockResponse } = require('@mysten/sui/client')
 require('dotenv').config()
 
-const BATCH_SIZE = 500
-const START = 4
-const END = 20
+const BATCH_SIZE = 100
+const START = 63089
+const END = 100000
 
 
 const db = require('knex')({
@@ -56,7 +56,6 @@ async function parseCheckpointId(cpId, suiClient) {
       }
     }))
 }
-
 
 
 const main = async () => {

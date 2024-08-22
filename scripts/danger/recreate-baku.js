@@ -6,8 +6,8 @@ const db = require('knex')({
 })
 
 async function main() {
-  await db.schema.dropTableIfExists('baku_metrics')
-  console.log(`Table baku_metrics dropped successfully`)
+  // await db.schema.dropTableIfExists('baku_metrics')
+  // console.log(`Table baku_metrics dropped successfully`)
 
   await db.schema.createTable('baku_metrics', (table) => {
     table.string('digest').unique()
