@@ -116,8 +116,8 @@ async function main() {
   const latestBaku = (await db('baku_metrics').max('timestamp').where('type', '=', 'ProgrammableTransaction'))[0].max
   logger.info(`[Baku] Latest data till ${latestBaku}`)
 
+  
   console.log(); logger.info("==================================================================")
-  // await showImolaActiveAddress('2024-07-16 00:00:00', '2024-08-05 23:59:59') // 8.5  11:59 PM UTC
 
   let setCacheImola
   let imolaName = 'imola-240816.json'
@@ -132,8 +132,8 @@ async function main() {
     logger.debug(`Saved ${setCacheImola.size} addresses to ${imolaName}.`)
   }
 
-  // await showImolaActiveAddress('2024-07-16 00:00:00', '2024-08-16 01:00:00') // 8.16 01:00 AM UTC (8.15 6PM PT)
   await showImolaActiveAddress('2024-08-16 01:00:00', '2024-08-23 01:00:00', setCacheImola) // 8.23 01:00 AM UTC (8.22 6PM PT)
+
 
   let setCacheBaku
   let bakuName = 'baku-240816.json'
@@ -149,7 +149,8 @@ async function main() {
   }
 
   // await showBakuActiveAddress('2024-07-16 00:00:00', '2024-08-16 01:00:00') // 8.16 01:00 AM UTC (8.15 6PM PT)
-  await showBakuActiveAddress('2024-08-16 01:00:00', '2024-08-23 01:00:00', setCacheBaku) // 8.23 01:00 AM UTC (8.22 6PM PT)
+  const setNew = await showBakuActiveAddress('2024-08-16 01:00:00', '2024-08-23 01:00:00', setCacheBaku) // 8.23 01:00 AM UTC (8.22 6PM PT)
+  writeFileSync(`./data/baku-240823.json`, JSON.stringify([...setNew], null, 2))
 
 
   console.log(); logger.info("==================================================================")
