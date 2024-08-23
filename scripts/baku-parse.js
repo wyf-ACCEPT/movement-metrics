@@ -83,6 +83,9 @@ async function parseCheckpointId(cpId, suiClient) {
 
 
 const main = async () => {
+  if (!process.env.RPC_BAKU.includes('127.0.0.1'))
+    throw new Error('This script is only for local running!')
+
   const rpcSui = new SuiClient({ url: process.env.RPC_BAKU })
 
   for (let heightBatch = START; heightBatch < END; heightBatch++) {

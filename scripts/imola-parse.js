@@ -89,6 +89,9 @@ function parseBlockRaw(blockRaw) {
 
 
 const main = async () => {
+  if (!process.env.RPC_IMOLA.includes('127.0.0.1'))
+    throw new Error('This script is only for local running!')
+  
   const rpcAptos = new Aptos({ fullnode: process.env.RPC_IMOLA })
 
   for (let heightBatch = START; heightBatch < END; heightBatch++) {
