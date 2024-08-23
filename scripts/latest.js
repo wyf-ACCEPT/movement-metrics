@@ -3,6 +3,8 @@ const { SuiClient, Checkpoint, SuiTransactionBlockResponse, MultiGetTransactionB
 const { Aptos } = require("@aptos-labs/ts-sdk")
 require('dotenv').config()
 
+const YELLOW = '\x1b[33m'
+const RESET = '\x1b[0m'
 
 const db = require('knex')({
   client: 'pg',
@@ -33,7 +35,7 @@ const main = async () => {
   const bakuCheckpoint = await rpcSui.getLatestCheckpointSequenceNumber()
   const bakuCheckpointDB = (await db('baku_metrics').max('checkpoint'))[0].max
   logger.info(`Total checkpoints Baku: ${bakuCheckpoint}`)
-  logger.info(`Total checkpoints Baku DB: ${bakuCheckpointDB}`)
+  logger.info(`Total checkpoints Baku DB: ${YELLOW}${(bakuCheckpointDB + 1) / 100}${RESET} * 100 - 1`)
   logger.info(`Latest record in Baku DB: ${(await db('baku_metrics').max('timestamp'))[0].max}\n`)
 
   const imolaTxns = await rpcAptos.getIndexerLastSuccessVersion()
@@ -45,7 +47,7 @@ const main = async () => {
   const latestBlock = (await rpcAptos.getBlockByVersion({ ledgerVersion: imolaTxns })).block_height
   const latestBlockDB = (await db('imola_metrics').max('block'))[0].max
   logger.info(`Total blocks Imola: ${latestBlock}`)
-  logger.info(`Total blocks Imola DB: ${latestBlockDB}`)
+  logger.info(`Total blocks Imola DB: ${YELLOW}${(latestBlockDB + 1) / 1000}${RESET} * 1000 - 1`)
 
   logger.info(`Latest record in Imola DB: ${(await db('imola_metrics').max('timestamp'))[0].max}\n`)
 
