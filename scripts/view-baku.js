@@ -8,16 +8,10 @@ const db = require('knex')({
 async function main() {
   console.log(
     await db('baku_metrics')
-      .select('*')
-      .whereNotNull('timestamp')
-      .orderBy('timestamp', 'desc')
-      .limit(1)
-  )
-  console.log(
-    await db('baku_metrics')
       .select('type')
       .count('*')
       .groupBy('type')
+      .where('timestamp', '<=', '2024-08-16 01:00:00')
   )
   console.log(
     await db('baku_metrics')

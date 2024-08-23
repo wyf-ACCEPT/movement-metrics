@@ -8,15 +8,17 @@ const db = require('knex')({
 async function main() {
   console.log(
     await db('imola_metrics')
-
-      // .select('type')
-      // .count('*')
-      // .groupBy('type')
-
-      .select('*')
-      .whereNotNull('timestamp')
-      .orderBy('timestamp', 'desc')
-      .limit(1)
+      .select('type')
+      .count('*')
+      .groupBy('type')
+  )
+  console.log(
+    await db('imola_metrics')
+      .count('*')
+      // .select('*')
+      // .whereNotNull('timestamp')
+      // .orderBy('timestamp', 'desc')
+      // .limit(1)
 
       // .select('block')
       // .count('*')
