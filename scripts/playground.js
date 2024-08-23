@@ -47,13 +47,21 @@ const main = async () => {
   //       })
   //   })
 
-  await rpcSui.getCheckpoint({ id: '6309037' }) // Has 59 txns
-    .then(checkpoint => {rpcSui.multiGetTransactionBlocks({
-      digests: checkpoint.transactions, options: { showEffects: true, showInput: true }
-    }); console.log(checkpoint.transactions)})
-    .then(responses => require('fs').writeFileSync(
-      'checkpoint-6309037-2.json', JSON.stringify(responses, null, 2)
-    ))
+  // await rpcSui.getCheckpoint({ id: '6309037' }) // Has 59 txns
+  //   .then(checkpoint => {rpcSui.multiGetTransactionBlocks({
+  //     digests: checkpoint.transactions, options: { showEffects: true, showInput: true }
+  //   }); console.log(checkpoint.transactions)})
+  //   .then(responses => require('fs').writeFileSync(
+  //     'checkpoint-6309037-2.json', JSON.stringify(responses, null, 2)
+  //   ))
+
+
+  // =============== 2024-08-23 14:05:21 ===============
+  // const r = require('../data/1.json')
+  // console.log(r)
+  console.log(require('fs').existsSync('./data/1.json'))
+  console.log(require('../data/1.json'))
+  require('fs').writeFileSync('./data/1.json', JSON.stringify([1, 2], null, 2))
 
 }
 

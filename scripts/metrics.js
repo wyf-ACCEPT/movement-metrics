@@ -1,4 +1,5 @@
 const winston = require('winston')
+const { writeFileSync, existsSync } = require('fs')
 require('dotenv').config()
 
 const db = require('knex')({
@@ -7,7 +8,7 @@ const db = require('knex')({
 })
 
 const logger = winston.createLogger({
-  level: 'info',
+  level: 'debug',
   format: winston.format.combine(
     winston.format.colorize(),
     winston.format.timestamp(),
@@ -31,7 +32,7 @@ async function showImolaTotalTxns(start, end) {
       .andWhere('timestamp', '<=', end)
   )[0].count
   logger.info(
-    `[imola] Txns from \x1b[33m${printStart(start)}\x1b[0m to \x1b[33m${printEnd(end)}\x1b[0m: ${result}`
+    `[Imola] Txns from \x1b[33m${printStart(start)}\x1b[0m to \x1b[33m${printEnd(end)}\x1b[0m: ${result}`
   )
 }
 
@@ -44,7 +45,7 @@ async function showBakuTotalTxns(start, end) {
       .andWhere('type', '=', 'ProgrammableTransaction')     // System transactions doesn't count
   )[0].count
   logger.info(
-    `[baku] Txns from \x1b[33m${printStart(start)}\x1b[0m to \x1b[33m${printEnd(end)}\x1b[0m: ${result}`
+    `[Baku] Txns from \x1b[33m${printStart(start)}\x1b[0m to \x1b[33m${printEnd(end)}\x1b[0m: ${result}`
   )
 }
 
@@ -80,8 +81,7 @@ async function showImolaNewAddress(start, end, interval = 1) {
 }
 
 
-async function showImolaActiveAddress(start, end) {
-  const addressSet = new Set()
+async function showImolaActiveAddress(start, end, addressSet = new Set()) {
   const rows = await db('imola_metrics')
     .select('addresses')
     .where('timestamp', '>=', start)
@@ -91,10 +91,10 @@ async function showImolaActiveAddress(start, end) {
   logger.info(
     `[Imola] Active wallets from \x1b[33m${printStart(start)}\x1b[0m to \x1b[33m${printEnd(end)}\x1b[0m: ${addressSet.size}`
   )
+  return addressSet
 }
 
-async function showBakuActiveAddress(start, end) {
-  const addressSet = new Set()
+async function showBakuActiveAddress(start, end, addressSet = new Set()) {
   const rows = await db('baku_metrics')
     .select('addresses')
     .where('timestamp', '>=', start)
@@ -105,6 +105,7 @@ async function showBakuActiveAddress(start, end) {
   logger.info(
     `[Baku] Active wallets from \x1b[33m${printStart(start)}\x1b[0m to \x1b[33m${printEnd(end)}\x1b[0m: ${addressSet.size}`
   )
+  return addressSet
 }
 
 
@@ -117,13 +118,47 @@ async function main() {
 
   console.log(); logger.info("==================================================================")
   // await showImolaActiveAddress('2024-07-16 00:00:00', '2024-08-05 23:59:59') // 8.5  11:59 PM UTC
-  await showImolaActiveAddress('2024-07-16 00:00:00', '2024-08-16 01:00:00') // 8.16 01:00 AM UTC (8.15 6PM PT)
-  await showBakuActiveAddress('2024-07-16 00:00:00', '2024-08-16 01:00:00') // 8.16 01:00 AM UTC (8.15 6PM PT)
+
+  let setCacheImola
+  let imolaName = 'imola-240816.json'
+  if (existsSync(`./data/${imolaName}`)) {
+    logger.debug(`Loading existing data from ${imolaName} ...`)
+    setCacheImola = new Set(require(`../data/${imolaName}`))
+    logger.debug(`Loaded ${setCacheImola.size} addresses.`)
+  } else {
+    logger.debug(`Fetching raw data ...`)
+    setCacheImola = await showImolaActiveAddress('2024-07-16 00:00:00', '2024-08-16 01:00:00') // 8.16 01:00 AM UTC (8.15 6PM PT)
+    writeFileSync(`./data/${imolaName}`, JSON.stringify([...setCacheImola], null, 2))
+    logger.debug(`Saved ${setCacheImola.size} addresses to ${imolaName}.`)
+  }
+
+  // await showImolaActiveAddress('2024-07-16 00:00:00', '2024-08-16 01:00:00') // 8.16 01:00 AM UTC (8.15 6PM PT)
+  await showImolaActiveAddress('2024-08-16 01:00:00', '2024-08-23 01:00:00', setCacheImola) // 8.23 01:00 AM UTC (8.22 6PM PT)
+
+  let setCacheBaku
+  let bakuName = 'baku-240816.json'
+  if (existsSync(`./data/${bakuName}`)) {
+    logger.debug(`Loading existing data from ${bakuName} ...`)
+    setCacheBaku = new Set(require(`../data/${bakuName}`))
+    logger.debug(`Loaded ${setCacheBaku.size} addresses.`)
+  } else {
+    logger.debug(`Fetching raw data ...`)
+    setCacheBaku = await showBakuActiveAddress('2024-07-16 00:00:00', '2024-08-16 01:00:00') // 8.16 01:00 AM UTC (8.15 6PM PT)
+    writeFileSync(`./data/${bakuName}`, JSON.stringify([...setCacheBaku], null, 2))
+    logger.debug(`Saved ${setCacheBaku.size} addresses to ${bakuName}.`)
+  }
+
+  // await showBakuActiveAddress('2024-07-16 00:00:00', '2024-08-16 01:00:00') // 8.16 01:00 AM UTC (8.15 6PM PT)
+  await showBakuActiveAddress('2024-08-16 01:00:00', '2024-08-23 01:00:00', setCacheBaku) // 8.23 01:00 AM UTC (8.22 6PM PT)
+
 
   console.log(); logger.info("==================================================================")
-  await showImolaTotalTxns('2024-07-16 00:00:00', '2024-08-16 01:00:00') // 8.16 1AM UTC
-  await showBakuTotalTxns('2024-07-16 00:00:00', '2024-08-16 01:00:00') // 8.16 1AM UTC
 
+  await showImolaTotalTxns('2024-07-16 00:00:00', '2024-08-16 01:00:00') // 8.16 1AM UTC
+  await showImolaTotalTxns('2024-07-16 00:00:00', '2024-08-23 01:00:00') // 8.23 1AM UTC
+
+  await showBakuTotalTxns('2024-07-16 00:00:00', '2024-08-16 01:00:00') // 8.16 1AM UTC
+  await showBakuTotalTxns('2024-07-16 00:00:00', '2024-08-23 01:00:00') // 8.23 1AM UTC
 
 
   // console.log(); logger.info("==================================================================")
