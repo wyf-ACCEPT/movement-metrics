@@ -5,3 +5,7 @@ grep -o "succeeded" ./logs/imola-send.log | wc -l; grep -o "ApiError" ./logs/imo
 head -n 3 ./logs/imola-send.log
 tail -n 3 ./logs/imola-send.log
 watch -n 1 tail -n 25 ./logs/baku-parsing.log
+
+# [Parse] Check rows?
+cat ./logs/baku-parsing.log | wc -l
+cat ./logs/imola-parsing.log | wc -l
