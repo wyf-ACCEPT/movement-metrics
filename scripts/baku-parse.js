@@ -1,10 +1,10 @@
 const winston = require('winston')
-const { SuiClient, Checkpoint, SuiTransactionBlockResponse } = require('@mysten/sui/client')
+const { SuiClient: OriginSuiClient, SuiTransactionBlockResponse, MultiGetTransactionBlocksParams } = require('@mysten/sui/client')
 require('dotenv').config()
 
 const BATCH_SIZE = 100
-const START = 63089
-const END = 100000
+const START = 100000
+const END = 107200
 
 
 const db = require('knex')({
@@ -26,6 +26,30 @@ const logger = winston.createLogger({
     }),
   ],
 })
+
+
+// Rewrite `multiGetTransactionBlocks` method to fetch all transactions in a request
+class SuiClient extends OriginSuiClient {
+  /**
+   * @param {MultiGetTransactionBlocksParams} input
+   * @returns {Promise<SuiTransactionBlockResponse[]>}
+   */
+  async multiGetTransactionBlocks(input) {
+    if (input.digests.length <= 50)
+      return super.multiGetTransactionBlocks(input)
+    else {
+      const responsePromises = []
+      for (let i = 0; i < input.digests.length; i += 50) {
+        responsePromises.push(super.multiGetTransactionBlocks({
+          digests: input.digests.slice(i, i + 50),
+          options: input.options,
+        }))
+      }
+      return Promise.all(responsePromises)
+        .then(responses => responses.flat())
+    }
+  }
+}
 
 
 /**

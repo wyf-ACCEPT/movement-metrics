@@ -4,8 +4,8 @@ const { Aptos: OriginalAptos, TransactionResponseType, Block, AnyNumber } = requ
 require("dotenv").config()
 
 const BATCH_SIZE = 1000
-const START = 4900
-const END = 5300
+const START = 5300
+const END = 5600
 
 
 const db = require('knex')({
