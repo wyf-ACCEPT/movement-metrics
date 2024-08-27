@@ -44,10 +44,10 @@ const main = async () => {
   logger.info(`Total txns Imola: ${imolaTxns}`)
   logger.info(`Total txns Imola DB: ${imolaTxnsDB} (${imolaPct}%)`)
 
-  const latestBlock = (await rpcAptos.getBlockByVersion({ ledgerVersion: imolaTxns })).block_height
-  const latestBlockDB = (await db('imola_metrics').max('block'))[0].max
-  logger.info(`Total blocks Imola: ${latestBlock}`)
-  logger.info(`Total blocks Imola DB: ${YELLOW}${(latestBlockDB + 1) / 1000}${RESET} * 1000 - 1`)
+  const imolaBlock = (await rpcAptos.getBlockByVersion({ ledgerVersion: imolaTxns })).block_height
+  const imolaBlockDB = (await db('imola_metrics').max('block'))[0].max
+  logger.info(`Total blocks Imola: ${imolaBlock}`)
+  logger.info(`Total blocks Imola DB: ${YELLOW}${(imolaBlockDB + 1) / 1000}${RESET} * 1000 - 1`)
 
   logger.info(`Latest record in Imola DB: ${(await db('imola_metrics').max('timestamp'))[0].max}\n`)
 

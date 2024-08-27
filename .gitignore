@@ -1,6 +1,12 @@
+# config & data & packages
 .vscode
 .env
 node_modules
-imola-send.log
-nohup.out
 data
+
+# nohup
+nohup.out
+
+# logs
+imola-send.log
+imola-online.log

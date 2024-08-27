@@ -4,8 +4,8 @@ const { Aptos: OriginalAptos, TransactionResponseType, Block, AnyNumber } = requ
 require("dotenv").config()
 
 const BATCH_SIZE = 1000
-const START = 5610
-const END = 5610
+const START = 5700
+const END = 5700
 
 
 const db = require('knex')({
@@ -14,16 +14,24 @@ const db = require('knex')({
 })
 
 const logger = winston.createLogger({
-  level: 'info',
   format: winston.format.combine(
     winston.format.colorize(),
     winston.format.timestamp(),
     winston.format.printf(({ timestamp, level, message }) => `${timestamp} [${level}]: ${message}`)
   ),
   transports: [
-    new winston.transports.Console(),
+    new winston.transports.Console({ 
+      level: 'debug',
+    }),
     new winston.transports.File({
-      filename: 'logs/imola-parsing.log', format: winston.format.simple()
+      level: 'info', 
+      format: winston.format.simple(),
+      filename: 'logs/imola-parsing.log',
+    }),
+    new winston.transports.File({
+      level: 'debug',
+      format: winston.format.simple(),
+      filename: 'logs/imola-online.log',
     }),
   ],
 })
@@ -92,7 +100,7 @@ const main = async () => {
   if (!process.env.RPC_IMOLA.includes('127.0.0.1'))
     throw new Error('This script is only for local running!')
   
-  const rpcAptos = new Aptos({ fullnode: process.env.RPC_IMOLA })
+  const rpcAptos = new Aptos({ fullnode: process.env.RPC_IMOLA, indexer: process.env.INDEXER_IMOLA })
 
   for (let heightBatch = START; heightBatch < END; heightBatch++) {
     const promises = []
@@ -124,3 +132,10 @@ const main = async () => {
 }
 
 main()
+
+
+module.exports = {
+  Aptos,
+  logger,
+  parseBlockRaw,
+}
