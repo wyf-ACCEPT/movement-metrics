@@ -131,7 +131,9 @@ const main = async () => {
   await db.destroy()
 }
 
-main()
+if (require.main === module) {
+  main();
+}
 
 
 module.exports = {

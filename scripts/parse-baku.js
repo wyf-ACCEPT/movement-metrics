@@ -13,16 +13,24 @@ const db = require('knex')({
 })
 
 const logger = winston.createLogger({
-  level: 'info',
   format: winston.format.combine(
     winston.format.colorize(),
     winston.format.timestamp(),
     winston.format.printf(({ timestamp, level, message }) => `${timestamp} [${level}]: ${message}`)
   ),
   transports: [
-    new winston.transports.Console(),
+    new winston.transports.Console({ 
+      level: 'debug',
+    }),
     new winston.transports.File({
-      filename: 'logs/baku-parsing.log', format: winston.format.simple()
+      level: 'info', 
+      format: winston.format.simple(),
+      filename: 'logs/baku-parsing.log',
+    }),
+    new winston.transports.File({
+      level: 'debug',
+      format: winston.format.simple(),
+      filename: 'logs/baku-online.log',
     }),
   ],
 })
@@ -65,7 +73,7 @@ async function parseCheckpointId(cpId, suiClient) {
     }))
     .then(responses => responses.map(response => {
       const addressSet = new Set()
-      if (response.effects.mutated) 
+      if (response.effects.mutated)
         response.effects.mutated.forEach(change => addressSet.add(change.owner.AddressOwner))
       if (response.effects.created)
         response.effects.created.forEach(change => addressSet.add(change.owner.AddressOwner))
@@ -104,8 +112,17 @@ const main = async () => {
       })
       .catch(err => logger.error(`Error inserting records: ${err}`))
   }
-  
+
   await db.destroy()
 }
 
-main()
+if (require.main === module) {
+  main();
+}
+
+
+module.exports = {
+  SuiClient,
+  logger,
+  parseCheckpointId,
+}
