@@ -1,5 +1,8 @@
 const winston = require('winston')
-const { SuiClient: OriginSuiClient, SuiTransactionBlockResponse, MultiGetTransactionBlocksParams } = require('@mysten/sui/client')
+const { 
+  SuiClient: OriginSuiClient, SuiTransactionBlockResponse, 
+  MultiGetTransactionBlocksParams, GetCheckpointParams, Checkpoint,
+} = require('@mysten/sui/client')
 require('dotenv').config()
 
 const BATCH_SIZE = 100
@@ -38,6 +41,27 @@ const logger = winston.createLogger({
 
 // Rewrite `multiGetTransactionBlocks` method to fetch all transactions in a request
 class SuiClient extends OriginSuiClient {
+  /**
+   * @param {GetCheckpointParams} input
+   * @return {Promise<Checkpoint>}
+   */
+  async getCheckpoint(input, retries = 3) {
+    return super.getCheckpoint(input)
+      .then(response => response)
+      .catch(async error => {
+        if (
+          (error.code === 'UND_ERR_CONNECT_TIMEOUT' || error.code === 'ECONNRESET')
+            && retries > 0
+        ) {
+          logger.warn(`Retrying getCheckpoint(${input.id})...`)
+          return new Promise(resolve => setTimeout(resolve, 1000))
+            .then(() => this.getCheckpoint(input, retries - 1))
+        } else {
+          throw error
+        }
+      })
+  }
+
   /**
    * @param {MultiGetTransactionBlocksParams} input
    * @returns {Promise<SuiTransactionBlockResponse[]>}
