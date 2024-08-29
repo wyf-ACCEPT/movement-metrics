@@ -13,7 +13,7 @@ const rpcAptos = new Aptos({ fullnode: process.env.RPC_IMOLA, indexer: process.e
 
 async function fetchBlocks() {
   const imolaBlock = (await rpcAptos.getBlockByVersion({
-    ledgerVersion: (await rpcAptos.getIndexerLastSuccessVersion() - 100n)
+    ledgerVersion: (await rpcAptos.getIndexerLastSuccessVersion() - 300n)
   })).block_height
   const imolaBlockDB = (await db('imola_metrics').max('block'))[0].max
 
