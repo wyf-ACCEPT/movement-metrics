@@ -57,6 +57,7 @@ class SuiClient extends OriginSuiClient {
           return new Promise(resolve => setTimeout(resolve, 1000))
             .then(() => this.getCheckpoint(input, retries - 1))
         } else {
+          logger.error(`Error code: ${error.code}, message: ${error.message}`)
           throw error
         }
       })
