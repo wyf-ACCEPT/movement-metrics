@@ -1,6 +1,6 @@
 const winston = require('winston')
-const { 
-  SuiClient: OriginSuiClient, SuiTransactionBlockResponse, 
+const {
+  SuiClient: OriginSuiClient, SuiTransactionBlockResponse,
   MultiGetTransactionBlocksParams, GetCheckpointParams, Checkpoint,
 } = require('@mysten/sui/client')
 require('dotenv').config()
@@ -22,11 +22,11 @@ const logger = winston.createLogger({
     winston.format.printf(({ timestamp, level, message }) => `${timestamp} [${level}]: ${message}`)
   ),
   transports: [
-    new winston.transports.Console({ 
+    new winston.transports.Console({
       level: 'debug',
     }),
     new winston.transports.File({
-      level: 'info', 
+      level: 'info',
       format: winston.format.simple(),
       filename: 'logs/baku-parsing.log',
     }),
@@ -42,7 +42,32 @@ const logger = winston.createLogger({
 // Rewrite `multiGetTransactionBlocks` method to fetch all transactions in a request
 class SuiClient extends OriginSuiClient {
   /**
+   * @param {number} retries
+   * @return {Promise<string>}
+   */
+  async getLatestCheckpointSequenceNumber(retries = 3) {
+    return super.getLatestCheckpointSequenceNumber()
+      .then(response => response)
+      .catch(async error => {
+        if (
+          (error.code == 'UND_ERR_CONNECT_TIMEOUT' || error.code == 'ECONNRESET')
+          && retries > 0
+        ) {
+          logger.warn('Retrying getLatestCheckpointSequenceNumber...')
+          return new Promise(resolve => setTimeout(resolve, 1000))
+            .then(() => this.getLatestCheckpointSequenceNumber(retries - 1))
+        } else {
+          logger.error(error)
+          logger.error(`Error code: ${error.code}, message: ${error.message}`)
+          require('fs').writeFileSync('./logs/error1.log', JSON.stringify(error))
+          throw error
+        }
+      })
+  }
+
+  /**
    * @param {GetCheckpointParams} input
+   * @param {number} retries
    * @return {Promise<Checkpoint>}
    */
   async getCheckpoint(input, retries = 3) {
@@ -51,13 +76,15 @@ class SuiClient extends OriginSuiClient {
       .catch(async error => {
         if (
           (error.code === 'UND_ERR_CONNECT_TIMEOUT' || error.code === 'ECONNRESET')
-            && retries > 0
+          && retries > 0
         ) {
           logger.warn(`Retrying getCheckpoint(${input.id})...`)
           return new Promise(resolve => setTimeout(resolve, 1000))
             .then(() => this.getCheckpoint(input, retries - 1))
         } else {
+          logger.error(error)
           logger.error(`Error code: ${error.code}, message: ${error.message}`)
+          require('fs').writeFileSync('./logs/error2.log', JSON.stringify(error))
           throw error
         }
       })

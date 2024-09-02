@@ -14,3 +14,6 @@ nohup node ./scripts/online-baku.js &
 nohup node ./scripts/online-imola.js &
 watch -n 1 tail -n 25 ./logs/baku-online.log
 watch -n 1 tail -n 25 ./logs/imola-online.log
+watch -n 1 tail -n 25 ./nohup.out
+tail -n 20 ./nohup.out
+grep -C 20 warn nohup.out 

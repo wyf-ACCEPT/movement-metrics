@@ -11,3 +11,5 @@ nohup.out
 imola-send.log
 imola-online.log
 baku-online.log
+baku-parsing.log
+imola-parsing.log
