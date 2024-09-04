@@ -45,20 +45,17 @@ class SuiClient extends OriginSuiClient {
    * @param {number} retries
    * @return {Promise<string>}
    */
-  async getLatestCheckpointSequenceNumber(retries = 3) {
+  async getLatestCheckpointSequenceNumber(retries = 10) {
     return super.getLatestCheckpointSequenceNumber()
       .then(response => response)
       .catch(async error => {
-        if (
-          (error.code == 'UND_ERR_CONNECT_TIMEOUT' || error.code == 'ECONNRESET')
-          && retries > 0
-        ) {
+        if (error.toString() == 'TypeError: fetch failed' && retries > 0) {
           logger.warn('Retrying getLatestCheckpointSequenceNumber...')
-          return new Promise(resolve => setTimeout(resolve, 1000))
+          return new Promise(resolve => setTimeout(resolve, 60_000))
             .then(() => this.getLatestCheckpointSequenceNumber(retries - 1))
         } else {
-          logger.error(error)
-          logger.error(`Error code: ${error.code}, message: ${error.message}`)
+          logger.error(`[START]${error.toString()}[END]`)
+          logger.error(`Error message: [START]${error.message}[END]`)
           require('fs').writeFileSync('./logs/error1.log', JSON.stringify(error))
           throw error
         }
@@ -70,20 +67,17 @@ class SuiClient extends OriginSuiClient {
    * @param {number} retries
    * @return {Promise<Checkpoint>}
    */
-  async getCheckpoint(input, retries = 3) {
+  async getCheckpoint(input, retries = 10) {
     return super.getCheckpoint(input)
       .then(response => response)
       .catch(async error => {
-        if (
-          (error.code === 'UND_ERR_CONNECT_TIMEOUT' || error.code === 'ECONNRESET')
-          && retries > 0
-        ) {
+        if (error.toString() == 'TypeError: fetch failed' && retries > 0) {
           logger.warn(`Retrying getCheckpoint(${input.id})...`)
-          return new Promise(resolve => setTimeout(resolve, 1000))
+          return new Promise(resolve => setTimeout(resolve, 60_000))
             .then(() => this.getCheckpoint(input, retries - 1))
         } else {
-          logger.error(error)
-          logger.error(`Error code: ${error.code}, message: ${error.message}`)
+          logger.error(`[START]${error.toString()}[END]`)
+          logger.error(`Error message: [START]${error.message}[END]`)
           require('fs').writeFileSync('./logs/error2.log', JSON.stringify(error))
           throw error
         }
