@@ -3,6 +3,7 @@ const {
   SuiClient: OriginSuiClient, SuiTransactionBlockResponse,
   MultiGetTransactionBlocksParams, GetCheckpointParams, Checkpoint,
 } = require('@mysten/sui/client')
+const { writeFileSync } = require('fs')
 require('dotenv').config()
 
 const BATCH_SIZE = 100
@@ -41,46 +42,54 @@ const logger = winston.createLogger({
 
 // Rewrite `multiGetTransactionBlocks` method to fetch all transactions in a request
 class SuiClient extends OriginSuiClient {
+
+  #retries = 10
+  #interval = 60_000
+
   /**
-   * @param {number} retries
    * @return {Promise<string>}
    */
-  async getLatestCheckpointSequenceNumber(retries = 10) {
+  async getLatestCheckpointSequenceNumber() {
     return super.getLatestCheckpointSequenceNumber()
       .then(response => response)
       .catch(async error => {
-        if (error.toString() == 'TypeError: fetch failed' && retries > 0) {
+        if (error.toString() == 'TypeError: fetch failed' && this.#retries > 0) {
           logger.warn('Retrying getLatestCheckpointSequenceNumber...')
-          return new Promise(resolve => setTimeout(resolve, 60_000))
-            .then(() => this.getLatestCheckpointSequenceNumber(retries - 1))
-        } else {
-          logger.error(`[START]${error.toString()}[END]`)
-          logger.error(`Error message: [START]${error.message}[END]`)
-          require('fs').writeFileSync('./logs/error1.log', JSON.stringify(error))
-          throw error
-        }
+          return new Promise(resolve => setTimeout(resolve, this.#interval))
+            .then(() => this.getLatestCheckpointSequenceNumber(this.#retries - 1))
+        } else this.#logError(error)
       })
   }
 
   /**
    * @param {GetCheckpointParams} input
-   * @param {number} retries
    * @return {Promise<Checkpoint>}
    */
-  async getCheckpoint(input, retries = 10) {
+  async getCheckpoint(input) {
     return super.getCheckpoint(input)
       .then(response => response)
       .catch(async error => {
-        if (error.toString() == 'TypeError: fetch failed' && retries > 0) {
+        if (error.toString() == 'TypeError: fetch failed' && this.#retries > 0) {
           logger.warn(`Retrying getCheckpoint(${input.id})...`)
-          return new Promise(resolve => setTimeout(resolve, 60_000))
-            .then(() => this.getCheckpoint(input, retries - 1))
-        } else {
-          logger.error(`[START]${error.toString()}[END]`)
-          logger.error(`Error message: [START]${error.message}[END]`)
-          require('fs').writeFileSync('./logs/error2.log', JSON.stringify(error))
-          throw error
-        }
+          return new Promise(resolve => setTimeout(resolve, this.#interval))
+            .then(() => this.getCheckpoint(input, this.#retries - 1))
+        } else this.#logError(error)
+      })
+  }
+
+  /**
+   * @param {MultiGetTransactionBlocksParams} input
+   * @return {Promise<SuiTransactionBlockResponse[]>}
+   */
+  async _multiGetTransactionBlocksWithRetries(input) {
+    return super.multiGetTransactionBlocks(input)
+      .then(response => response)
+      .catch(async error => {
+        if (error.toString() == 'TypeError: fetch failed' && this.#retries > 0) {
+          logger.warn(`Retrying multiGetTransactionBlocks(${input.digests.length})...`)
+          return new Promise(resolve => setTimeout(resolve, this.#interval))
+            .then(() => this._multiGetTransactionBlocksWithRetries(input, this.#retries - 1))
+        } else this.#logError(error)
       })
   }
 
@@ -90,20 +99,34 @@ class SuiClient extends OriginSuiClient {
    */
   async multiGetTransactionBlocks(input) {
     if (input.digests.length <= 50)
-      return super.multiGetTransactionBlocks(input)
+      return this._multiGetTransactionBlocksWithRetries(input)
     else {
       const responsePromises = []
       for (let i = 0; i < input.digests.length; i += 50) {
-        responsePromises.push(super.multiGetTransactionBlocks({
-          digests: input.digests.slice(i, i + 50),
-          options: input.options,
-        }))
+        responsePromises.push(
+          this._multiGetTransactionBlocksWithRetries({
+            digests: input.digests.slice(i, i + 50),
+            options: input.options,
+          })
+        )
       }
       return Promise.all(responsePromises)
         .then(responses => responses.flat())
     }
   }
+
+
+  /**
+   * @param {error} err
+   */
+  #logError(err) {
+    logger.error(`[START]${err.toString()}[END]`)
+    logger.error(`Error message: [START]${err.message}[END]`)
+    writeFileSync('./logs/latest-error.log', JSON.stringify(err))
+    throw err
+  }
 }
+
 
 
 /**
