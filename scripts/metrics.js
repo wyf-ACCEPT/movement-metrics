@@ -197,32 +197,20 @@ async function main() {
 
   console.log(); logger.info("==================================================================")
 
-  await showImolaTotalTxns('2024-07-16 00:00:00', '2024-08-16 01:00:00') // 8.16 1AM UTC
-  await showImolaTotalTxns('2024-07-16 00:00:00', '2024-08-23 01:00:00') // 8.23 1AM UTC
-  await showImolaTotalTxns('2024-07-16 00:00:00', '2024-08-30 01:00:00') // 8.30 1AM UTC
+  for (let date = new Date('2024-08-16 01:00:00'); date < latestImola; date.setDate(date.getDate() + 7)) 
+    await showImolaTotalTxns('2024-07-16 00:00:00', date.toISOString())
 
-  await showBakuTotalTxns('2024-07-16 00:00:00', '2024-08-16 01:00:00') // 8.16 1AM UTC
-  await showBakuTotalTxns('2024-07-16 00:00:00', '2024-08-23 01:00:00') // 8.23 1AM UTC
-  await showBakuTotalTxns('2024-07-16 00:00:00', '2024-08-30 01:00:00') // 8.30 1AM UTC
+  for (let date = new Date('2024-08-16 01:00:00'); date < latestBaku; date.setDate(date.getDate() + 7))
+    await showBakuTotalTxns('2024-07-16 00:00:00', date.toISOString())
 
+  // await showImolaTotalTxns('2024-07-16 00:00:00', '2024-08-16 01:00:00') // 8.16 1AM UTC
+  // await showImolaTotalTxns('2024-07-16 00:00:00', '2024-08-23 01:00:00') // 8.23 1AM UTC
+  // await showImolaTotalTxns('2024-07-16 00:00:00', '2024-08-30 01:00:00') // 8.30 1AM UTC
+  // await showImolaTotalTxns('2024-07-16 00:00:00', '2024-09-06 01:00:00') // 9.06 1AM UTC
 
-
-  // console.log(); logger.info("==================================================================")
-  // await showImolaTotalTxns('2024-07-16 00:00:00', '2024-07-22 23:59:59')
-  // await showImolaTotalTxns('2024-07-23 00:00:00', '2024-07-29 23:59:59')
-  // await showImolaTotalTxns('2024-07-30 00:00:00', '2024-08-05 23:59:59')
-  // await showImolaTotalTxns('2024-08-06 00:00:00', '2024-08-12 23:59:59')
-  // await showImolaTotalTxns('2024-08-13 00:00:00', 'now()')
-
-  // console.log(); logger.info("==================================================================")
-  // await showImolaNewAddress('2024-07-22 00:00:00', '2024-08-16 00:00:00', 7)
-
-  // console.log(); logger.info("==================================================================")
-  // await showImolaActiveAddress('2024-07-16 00:00:00', '2024-07-22 23:59:59')
-  // await showImolaActiveAddress('2024-07-23 00:00:00', '2024-07-29 23:59:59')
-  // await showImolaActiveAddress('2024-07-30 00:00:00', '2024-08-05 23:59:59')
-  // await showImolaActiveAddress('2024-08-06 00:00:00', '2024-08-12 23:59:59')
-  // await showImolaActiveAddress('2024-08-13 00:00:00', 'now()')
+  // await showBakuTotalTxns('2024-07-16 00:00:00', '2024-08-16 01:00:00') // 8.16 1AM UTC
+  // await showBakuTotalTxns('2024-07-16 00:00:00', '2024-08-23 01:00:00') // 8.23 1AM UTC
+  // await showBakuTotalTxns('2024-07-16 00:00:00', '2024-08-30 01:00:00') // 8.30 1AM UTC
 
   db.destroy()
 }
