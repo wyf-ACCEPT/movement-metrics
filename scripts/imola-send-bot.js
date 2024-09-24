@@ -1,24 +1,11 @@
-const winston = require('winston')
 const { formatUnits, parseUnits } = require('ethers')
 const {
-  Aptos, Account, Ed25519PrivateKey, AccountAddress, PendingTransactionResponse, HexInput,
+  Account, Ed25519PrivateKey, AccountAddress, PendingTransactionResponse, HexInput,
 } = require("@aptos-labs/ts-sdk")
+const { AptosWithRetries, logger } = require('./utils')
 require("dotenv").config()
 
-const rpcAptos = new Aptos({ indexer: process.env.INDEXER_IMOLA, fullnode: process.env.RPC_IMOLA })
-
-const logger = winston.createLogger({
-  level: 'silly',
-  format: winston.format.combine(
-    // winston.format.colorize(),
-    winston.format.timestamp(),
-    winston.format.printf(({ timestamp, level, message }) => `${timestamp} [${level}]: ${message}`),
-  ),
-  transports: [
-    new winston.transports.Console(),
-    new winston.transports.File({ filename: 'logs/imola-send.log'}),
-  ],
-})
+const rpcAptos = new AptosWithRetries({ indexer: process.env.INDEXER_IMOLA, fullnode: process.env.RPC_IMOLA })
 
 /**
  * @param {Account} account
