@@ -5,12 +5,14 @@ const rpcAptos = new AptosWithRetries({ indexer: process.env.INDEXER_IMOLA, full
 
 const main = async () => {
 
-  const imolaTxns = await rpcAptos.getIndexerLastSuccessVersion()
+  // console.log(await rpcAptos.getBlockByVersion({ ledgerVersion: 33397000 }))
+
+  const imolaTxns = (await rpcAptos.getIndexerLastSuccessVersion()) - 1000n
   let currentHeight = (await rpcAptos.getBlockByVersion({ ledgerVersion: imolaTxns })).block_height
 
   while (1) {
     let fetchFlag = false
-    const imolaTxns = await rpcAptos.getIndexerLastSuccessVersion()
+    const imolaTxns = (await rpcAptos.getIndexerLastSuccessVersion()) - 1000n   // Avoid rpc not up-to-date
     const latestHeight = (await rpcAptos.getBlockByVersion({ ledgerVersion: imolaTxns })).block_height
     while (currentHeight <= latestHeight) {
       const block = await rpcAptos.getBlockByHeight({

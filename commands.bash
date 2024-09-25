@@ -17,3 +17,6 @@ watch -n 1 tail -n 25 ./logs/imola-online.log
 watch -n 1 tail -n 25 ./nohup.out
 tail -n 30 ./nohup.out
 grep -C 20 warn nohup.out 
+
+nohup node ./scripts/imola-send-bot.js > nohup1.out &
+watch -n 1 tail -n 25 ./nohup1.out

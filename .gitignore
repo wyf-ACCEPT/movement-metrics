@@ -6,6 +6,7 @@ data
 
 # nohup
 nohup.out
+nohup1.out
 
 # logs
 imola-send.log

@@ -106,7 +106,7 @@ const main = async () => {
 
   const initialAmount = 500
   const accountsUpperLimit = 120
-  const phase2epochs = 1000
+  const phase2epochs = 20000
   const dustAmount = parseUnits('0.001', 8)
 
   // Set up Alice account (Owner)
