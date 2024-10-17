@@ -20,3 +20,5 @@ grep -C 20 warn nohup.out
 
 nohup node ./scripts/imola-send-bot.js > nohup1.out &
 watch -n 1 tail -n 25 ./nohup1.out
+
+node --max-old-space-size=8192 ./scripts/metrics.js   # out of memory error
